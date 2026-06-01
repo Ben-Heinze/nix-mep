@@ -73,6 +73,9 @@
     variant = "";
   };
 
+
+  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+
   # experimental features
 
   services.xserver.displayManager.sessionCommands = ''
@@ -115,7 +118,7 @@
   users.users.ben = {
     isNormalUser = true;
     description = "ben";
-    extraGroups = [ "networkmanager" "wheel" ];
+    extraGroups = [ "networkmanager" "wheel" "video" ];
     packages = with pkgs; [
       kdePackages.kate
     #  thunderbird
@@ -132,7 +135,7 @@
   # $ nix search wget
   environment.systemPackages = with pkgs; [
   vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
-  just 
+  just
   git
   claude-code
   awesome
@@ -143,6 +146,7 @@
   direnv
   neofetch
   starship
+  brightnessctl
   #  wget
   ];
 

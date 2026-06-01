@@ -30,7 +30,31 @@ end
 
 beautiful.init(gears.filesystem.get_themes_dir() .. "default/theme.lua")
 
-terminal = "xterm"
+-- Modern dark theme overrides
+beautiful.font                  = "UbuntuMono Nerd Font 14"
+beautiful.wibar_height          = 44
+beautiful.wibar_bg              = "#1f2229"
+beautiful.wibar_fg              = "#d3dae3"
+beautiful.bg_normal             = "#1f2229"
+beautiful.bg_focus              = "#2f3440"
+beautiful.bg_systray            = "#1f2229"
+beautiful.fg_normal             = "#d3dae3"
+beautiful.fg_focus              = "#ffffff"
+beautiful.border_width          = 2
+beautiful.border_normal         = "#2f3440"
+beautiful.border_focus          = "#5294e2"
+beautiful.taglist_squares_sel   = nil
+beautiful.taglist_squares_unsel = nil
+beautiful.taglist_bg_focus      = "#5294e2"
+beautiful.taglist_fg_focus      = "#ffffff"
+beautiful.taglist_bg_occupied   = "#2f3440"
+beautiful.taglist_fg_occupied   = "#d3dae3"
+beautiful.taglist_bg_empty      = "#252b36"
+beautiful.taglist_fg_empty      = "#6b7685"
+beautiful.tasklist_bg_focus     = "#2f3440"
+beautiful.tasklist_fg_focus     = "#ffffff"
+
+terminal = "kitty"
 editor = os.getenv("EDITOR") or "nano"
 editor_cmd = terminal .. " -e " .. editor
 
@@ -72,7 +96,93 @@ menubar.utils.terminal = terminal
 
 mykeyboardlayout = awful.widget.keyboardlayout()
 
-mytextclock = wibox.widget.textclock()
+mytextclock = wibox.widget.textclock("%a %b %d  %I:%M %p")
+
+local mybattery = awful.widget.watch(
+    {"bash", "-c", "cat /sys/class/power_supply/BAT0/capacity /sys/class/power_supply/BAT0/status 2>/dev/null"},
+    30,
+    function(widget, stdout)
+        local lines = {}
+        for line in stdout:gmatch("[^\n]+") do table.insert(lines, line) end
+        if #lines >= 2 then
+            local pct, status = lines[1], lines[2]
+            local prefix = status == "Charging" and "+" or ""
+            widget:set_text("BAT " .. prefix .. pct .. "%")
+        else
+            widget:set_text("BAT N/A")
+        end
+    end
+)
+
+local function pill(w, bg_color)
+    return wibox.widget {
+        { w, left = 12, right = 12, top = 4, bottom = 4, widget = wibox.container.margin },
+        bg     = bg_color or "#2a3045",
+        shape  = function(cr, width, height) gears.shape.rounded_rect(cr, width, height, 10) end,
+        widget = wibox.container.background,
+    }
+end
+
+local mycpu = awful.widget.watch(
+    {"bash", "-c", "awk '/^cpu / {u=$2+$4; t=$2+$3+$4+$5; printf \"%d\", u*100/t}' /proc/stat"},
+    2,
+    function(widget, stdout)
+        widget:set_text("CPU " .. (stdout:match("%d+") or "?") .. "%")
+    end
+)
+
+local myram = awful.widget.watch(
+    {"bash", "-c", "awk '/MemTotal/ {t=$2} /MemAvailable/ {a=$2} END {printf \"%d\", (t-a)*100/t}' /proc/meminfo"},
+    5,
+    function(widget, stdout)
+        widget:set_text("RAM " .. (stdout:match("%d+") or "?") .. "%")
+    end
+)
+
+local mydisk = awful.widget.watch(
+    {"bash", "-c", "df / | awk 'NR==2{print $5}' | tr -d '%'"},
+    30,
+    function(widget, stdout)
+        widget:set_text("DSK " .. stdout:gsub("%s+", "") .. "%")
+    end
+)
+
+local mytemp = awful.widget.watch(
+    {"bash", "-c", "awk '{printf \"%d\", $1/1000}' /sys/class/thermal/thermal_zone0/temp 2>/dev/null || echo '?'"},
+    10,
+    function(widget, stdout)
+        widget:set_text("TMP " .. stdout:gsub("%s+", "") .. "°C")
+    end
+)
+
+local mynet = awful.widget.watch(
+    {"bash", "-c", "nmcli -t -f active,ssid dev wifi 2>/dev/null | grep '^yes:' | cut -d: -f2-"},
+    10,
+    function(widget, stdout)
+        local ssid = stdout:gsub("%s+", "")
+        if ssid == "" then
+            widget:set_text("No WiFi")
+        else
+            widget:set_text("WiFi " .. ssid)
+        end
+    end
+)
+
+local myvolume = awful.widget.watch(
+    {"bash", "-c", "server=\"unix:/run/user/$(id -u)/pulse/native\"; sink=$(pactl --server=\"$server\" get-default-sink 2>/dev/null); vol=$(pactl --server=\"$server\" get-sink-volume \"$sink\" 2>/dev/null | grep -o '[0-9]*%' | head -1 | tr -d '%'); mute=$(pactl --server=\"$server\" get-sink-mute \"$sink\" 2>/dev/null | awk '/Mute:/{print $2}'); echo \"${vol:-?}\"; echo \"${mute:-no}\""},
+    2,
+    function(widget, stdout)
+        local lines = {}
+        for line in stdout:gmatch("[^\n]+") do table.insert(lines, line) end
+        local vol   = lines[1] or "?"
+        local muted = lines[2] and lines[2]:find("yes")
+        if muted then
+            widget:set_text("VOL muted")
+        else
+            widget:set_text("VOL " .. vol .. "%")
+        end
+    end
+)
 
 local taglist_buttons = gears.table.join(
                     awful.button({ }, 1, function(t) t:view_only() end),
@@ -132,7 +242,22 @@ awful.screen.connect_for_each_screen(function(s)
     s.mytaglist = awful.widget.taglist {
         screen  = s,
         filter  = awful.widget.taglist.filter.all,
-        buttons = taglist_buttons
+        buttons = taglist_buttons,
+        layout  = { spacing = 4, layout = wibox.layout.fixed.horizontal },
+        widget_template = {
+            {
+                {
+                    id     = "text_role",
+                    align  = "center",
+                    widget = wibox.widget.textbox,
+                },
+                left = 10, right = 10, top = 4, bottom = 4,
+                widget = wibox.container.margin,
+            },
+            id     = "background_role",
+            shape  = function(cr, w, h) gears.shape.rounded_rect(cr, w, h, 8) end,
+            widget = wibox.container.background,
+        },
     }
 
     s.mytasklist = awful.widget.tasklist {
@@ -141,23 +266,30 @@ awful.screen.connect_for_each_screen(function(s)
         buttons = tasklist_buttons
     }
 
-    s.mywibox = awful.wibar({ position = "top", screen = s })
+    s.mywibox = awful.wibar({ position = "top", screen = s, height = beautiful.wibar_height })
 
     s.mywibox:setup {
         layout = wibox.layout.align.horizontal,
-        { -- Left widgets
-            layout = wibox.layout.fixed.horizontal,
-            mylauncher,
-            s.mytaglist,
+        { -- Left: taglist + prompt
+            layout  = wibox.layout.fixed.horizontal,
+            spacing = 4,
+            wibox.container.margin(s.mytaglist, 8, 4, 0, 0),
             s.mypromptbox,
         },
-        s.mytasklist,
-        { -- Right widgets
-            layout = wibox.layout.fixed.horizontal,
-            mykeyboardlayout,
-            wibox.widget.systray(),
-            mytextclock,
-            s.mylayoutbox,
+        wibox.container.margin(s.mytasklist, 8, 8),
+        { -- Right: system pills
+            layout  = wibox.layout.fixed.horizontal,
+            spacing = 6,
+            wibox.container.margin(wibox.widget.systray(), 4, 4, 8, 8),
+            pill(mytemp,      "#3a1515"),
+            pill(mycpu,       "#3d2800"),
+            pill(myram,       "#1a3a20"),
+            pill(mydisk,      "#2e2800"),
+            pill(mynet,       "#0f2e2e"),
+            pill(myvolume,    "#2a1a40"),
+            pill(mybattery,   "#1a2e4a"),
+            pill(mytextclock, "#1e2a50"),
+            wibox.container.margin(s.mylayoutbox, 4, 10, 8, 8),
         },
     }
 end)
@@ -260,8 +392,24 @@ globalkeys = gears.table.join(
                   }
               end,
               {description = "lua execute prompt", group = "awesome"}),
-    awful.key({ modkey }, "p", function() menubar.show() end,
-              {description = "show the menubar", group = "launcher"})
+    awful.key({ modkey }, "p", function() awful.spawn("rofi -show drun") end,
+              {description = "show rofi launcher", group = "launcher"}),
+
+    awful.key({ }, "XF86MonBrightnessUp",
+              function () awful.spawn("brightnessctl set +10%") end,
+              {description = "increase brightness", group = "system"}),
+    awful.key({ }, "XF86MonBrightnessDown",
+              function () awful.spawn("brightnessctl set 10%-") end,
+              {description = "decrease brightness", group = "system"}),
+    awful.key({ }, "XF86AudioRaiseVolume",
+              function () awful.spawn("bash -c 'export XDG_RUNTIME_DIR=/run/user/$(id -u); pactl set-sink-volume $(pactl get-default-sink) +5%'") end,
+              {description = "raise volume", group = "media"}),
+    awful.key({ }, "XF86AudioLowerVolume",
+              function () awful.spawn("bash -c 'export XDG_RUNTIME_DIR=/run/user/$(id -u); pactl set-sink-volume $(pactl get-default-sink) -5%'") end,
+              {description = "lower volume", group = "media"}),
+    awful.key({ }, "XF86AudioMute",
+              function () awful.spawn("bash -c 'export XDG_RUNTIME_DIR=/run/user/$(id -u); pactl set-sink-mute $(pactl get-default-sink) toggle'") end,
+              {description = "toggle mute", group = "media"})
 )
 
 clientkeys = gears.table.join(
