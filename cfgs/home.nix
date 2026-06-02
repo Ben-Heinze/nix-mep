@@ -45,6 +45,16 @@ in
     nix-direnv.enable = true;
   };
 
+  programs.bash = {
+    enable = true;
+    bashrcExtra = builtins.readFile ./bashrc;
+  };
+
+  programs.starship = {
+    enable = true;
+    enableBashIntegration = true;
+  };
+
 
 
 programs.kitty = {
