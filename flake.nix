@@ -1,5 +1,5 @@
 {
-  description = "A simple NixOS flake";
+  description = "NixOS configurations for laptop and desktop";
 
   inputs = {
     flake-parts.url = "github:hercules-ci/flake-parts";
@@ -28,32 +28,40 @@
       system = "x86_64-linux";
       config.allowUnfree = true;
     };
+
+    homeManagerModule = {
+      home-manager.useGlobalPkgs = true;
+      home-manager.useUserPackages = true;
+      home-manager.users.ben = import ./cfgs/home.nix;
+    };
   in {
-    nixosConfigurations.ben = nixpkgs.lib.nixosSystem {
+    nixosConfigurations.laptop = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
-
       modules = [
-        ./cfgs/configuration.nix
+        ./common
+        ./hosts/laptop
         home-manager-stable.nixosModules.home-manager
-        {
-          home-manager.useGlobalPkgs = true;
-          home-manager.useUserPackages = true;
-          home-manager.users.ben = import ./cfgs/home.nix;
-        }
+        homeManagerModule
       ];
-
       specialArgs = {
         inherit inputs;
         inherit unstablePkgs;
       };
     };
-    #
-    # homeConfigurations.jordan = home-manager-stable.lib.homeManagerConfiguration {
-    #   inherit pkgs;
-    #   modules = [
-    #     ./cfgs/home.nix
-    #   ];
-    # };
+
+    nixosConfigurations.desktop = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        ./common
+        ./hosts/desktop
+        home-manager-stable.nixosModules.home-manager
+        homeManagerModule
+      ];
+      specialArgs = {
+        inherit inputs;
+        inherit unstablePkgs;
+      };
+    };
 
     devShells.x86_64-linux.default = pkgs.mkShell {
       buildInputs = [ ];
