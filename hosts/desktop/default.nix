@@ -102,7 +102,6 @@
 
   # Desktop-specific packages
   environment.systemPackages = with pkgs; [
-    discord
     neovim-unwrapped
     blueman
     bluez

@@ -77,6 +77,8 @@
     wl-clipboard
     stow
     networkmanagerapplet
+    discord
+    spotify
   ];
 
   # Fonts
