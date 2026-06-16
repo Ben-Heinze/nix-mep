@@ -30,6 +30,7 @@ clean:
 
 update:
     nix-channel --update
+    u
     sudo nixos-rebuild switch --flake .#{{host}}
 
 jq:
