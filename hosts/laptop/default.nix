@@ -44,6 +44,9 @@
 
   # }}} Bootloader
 
+  # Trackpad acceleration
+  services.libinput.touchpad.accelSpeed = "0.3";
+
   # Kanata: target the laptop's built-in keyboard
   services.kanata.keyboards.internalKeyboard.devices = [
     "/dev/input/by-path/platform-i8042-serio-0-event-kbd"
