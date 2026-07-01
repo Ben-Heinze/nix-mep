@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, pkgs, unstablePkgs, ... }:
 
 {
   # Networking
@@ -62,7 +62,7 @@
     vim
     just
     git
-    claude-code
+    unstablePkgs.claude-code
     rofi
     zathura
     kitty
@@ -79,6 +79,7 @@
     networkmanagerapplet
     discord
     spotify
+    copilot-language-server
   ];
 
   # Fonts

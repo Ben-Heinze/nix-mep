@@ -1,7 +1,7 @@
 # neovim
-alias neo="nix run github:Ben-Heinze/nvmep2 --extra-experimental-features flakes --extra-experimental-features nix-command"
+alias neo="nix run --refresh github:Ben-Heinze/nvmep2 --extra-experimental-features flakes --extra-experimental-features nix-command"
 # emacs
-alias emc="nix run github:jordanschupbach/emc --extra-experimental-features flakes --extra-experimental-features nix-command -- -nw"
+alias emc="nix run --refresh github:jordanschupbach/emc --extra-experimental-features flakes --extra-experimental-features nix-command -- -nw"
 
 # nix configuration
 alias nixconf="sudo vim /etc/nixos/configuration.nix"
