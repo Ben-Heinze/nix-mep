@@ -38,8 +38,8 @@
     nixosConfigurations.laptop = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       modules = [
-        ./common
-        ./hosts/laptop
+        ./common/configuration.nix
+        ./hosts/laptop/configuration.nix
         home-manager-stable.nixosModules.home-manager
         homeManagerModule
       ];
@@ -52,8 +52,8 @@
     nixosConfigurations.desktop = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       modules = [
-        ./common
-        ./hosts/desktop
+        ./common/configuration.nix
+        ./hosts/desktop/configuration.nix
         home-manager-stable.nixosModules.home-manager
         homeManagerModule
       ];

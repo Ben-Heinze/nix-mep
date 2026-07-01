@@ -10,14 +10,14 @@ flake.lock                      # Pinned dependency versions
 justfile                        # Shortcut commands (build, switch, etc.)
 
 common/
-  default.nix                   # Shared system config (both machines get this)
+  configuration.nix                   # Shared system config (both machines get this)
 
 hosts/
   laptop/
-    default.nix                 # Laptop-specific config
+    configuration.nix                 # Laptop-specific config
     hardware-configuration.nix  # Laptop hardware (auto-generated, do not edit)
   desktop/
-    default.nix                 # Desktop-specific config
+    configuration.nix                 # Desktop-specific config
     hardware-configuration.nix  # Desktop hardware (auto-generated, do not edit)
 
 cfgs/
@@ -35,8 +35,8 @@ jordansStuff/                   # Archived config (not used)
 
 The `flake.nix` defines two NixOS configurations: `laptop` and `desktop`. Each one imports:
 
-1. **`common/default.nix`** — Everything shared: networking, audio (PipeWire), display manager (SDDM), desktop environments (KDE Plasma + AwesomeWM), kanata keybinds, system packages, inputrc, etc.
-2. **`hosts/<machine>/default.nix`** — Machine-specific overrides: bootloader, GPU drivers, keyboard device paths, display scaling, and packages only needed on that machine.
+1. **`common/configuration.nix`** — Everything shared: networking, audio (PipeWire), display manager (SDDM), desktop environments (KDE Plasma + AwesomeWM), kanata keybinds, system packages, inputrc, etc.
+2. **`hosts/<machine>/configuration.nix`** — Machine-specific overrides: bootloader, GPU drivers, keyboard device paths, display scaling, and packages only needed on that machine.
 3. **`cfgs/home.nix`** — Home-manager configuration applied to the `ben` user on both machines. Manages dotfiles, terminal (kitty), shell (bash + starship), direnv, rofi, and the AwesomeWM rc.lua.
 
 NixOS's module system merges all three layers. Lists (like `environment.systemPackages`) get concatenated. Scalar values set in a host override those in common.
@@ -45,20 +45,20 @@ NixOS's module system merges all three layers. Lists (like `environment.systemPa
 
 | Config | Location |
 |---|---|
-| Shared between both machines | `common/default.nix` |
-| Laptop-only (4K DPI, GRUB, kanata device path) | `hosts/laptop/default.nix` |
-| Desktop-only (Steam, bluetooth, AMD GPU, Discord) | `hosts/desktop/default.nix` |
+| Shared between both machines | `common/configuration.nix` |
+| Laptop-only (4K DPI, GRUB, kanata device path) | `hosts/laptop/configuration.nix` |
+| Desktop-only (Steam, bluetooth, AMD GPU, Discord) | `hosts/desktop/configuration.nix` |
 | User dotfiles, terminal, shell config | `cfgs/home.nix` |
 | AwesomeWM layout and keybinds | `cfgs/rc.lua` |
 | Bash aliases | `cfgs/bashrc` |
 
 ### Kanata (Keyboard Remapping)
 
-Both machines share the same kanata keybind configuration (defined in `common/default.nix`), which remaps:
+Both machines share the same kanata keybind configuration (defined in `common/configuration.nix`), which remaps:
 - **Caps Lock** to Escape on tap, Ctrl on hold
 - **Right Shift** to Super (Mod key)
 
-The laptop targets its built-in keyboard by device path. The desktop grabs all keyboards (no device filter), which works fine with a single keyboard. To target a specific keyboard on the desktop, find your device with `ls /dev/input/by-id/` and uncomment the `devices` option in `hosts/desktop/default.nix`.
+The laptop targets its built-in keyboard by device path. The desktop grabs all keyboards (no device filter), which works fine with a single keyboard. To target a specific keyboard on the desktop, find your device with `ls /dev/input/by-id/` and uncomment the `devices` option in `hosts/desktop/configuration.nix`.
 
 ### Hostnames
 
@@ -130,16 +130,16 @@ Editing existing tracked files does **not** require `git add` — Nix reads your
 ## Making Changes
 
 ### Adding a package to both machines
-Edit `common/default.nix` and add it to `environment.systemPackages`.
+Edit `common/configuration.nix` and add it to `environment.systemPackages`.
 
 ### Adding a package to only one machine
-Edit `hosts/laptop/default.nix` or `hosts/desktop/default.nix` and add it to `environment.systemPackages`.
+Edit `hosts/laptop/configuration.nix` or `hosts/desktop/configuration.nix` and add it to `environment.systemPackages`.
 
 ### Adding a user-level package or dotfile
 Edit `cfgs/home.nix` and add it to `home.packages` or configure it under `programs.*`.
 
 ### Changing kanata keybinds
-Edit the kanata config in `common/default.nix`. The keybinds apply to both machines.
+Edit the kanata config in `common/configuration.nix`. The keybinds apply to both machines.
 
 ### Changing the AwesomeWM config
 Edit `cfgs/rc.lua`. This is shared by both machines via home-manager.
