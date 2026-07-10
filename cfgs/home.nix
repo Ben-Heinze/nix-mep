@@ -19,7 +19,7 @@ let
     owner = "Diolinux";
     repo = "PhotoGIMP";
     rev = "master";
-    hash = "sha256-EafWnUnHmcWsKlUZtT/GLyIeq+S9wFuKCijn3BedKGo=";
+    hash = "sha256-6LerXDaBxKqe8Jz0D2fZdA/3ui1tyThr6AhwcbTXDGU=";
   };
 in
 
