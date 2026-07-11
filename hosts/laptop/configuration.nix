@@ -24,9 +24,8 @@
     variant = "";
   };
 
-  # Session commands for 4K DPI and key repeat
+  # Session commands for 4K DPI
   services.xserver.displayManager.sessionCommands = ''
-    xset r rate 200 60
     xrdb -merge <<EOF
     Xft.dpi: 192
     EOF

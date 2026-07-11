@@ -20,6 +20,10 @@
     LC_TIME = "en_US.UTF-8";
   };
 
+  # Key repeat rate (shared across all machines)
+  services.xserver.autoRepeatDelay = 200;
+  services.xserver.autoRepeatInterval = 17;
+
   # Display & Desktop Environments
   services.xserver.enable = true;
   services.displayManager.sddm.enable = true;

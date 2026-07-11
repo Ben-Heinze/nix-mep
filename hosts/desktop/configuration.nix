@@ -27,10 +27,6 @@
     };
   };
 
-  # Key repeat rate
-  services.xserver.autoRepeatDelay = 200;
-  services.xserver.autoRepeatInterval = 50;
-
   # {{{ Bootloader (systemd-boot)
 
   boot.loader.systemd-boot.enable = true;
