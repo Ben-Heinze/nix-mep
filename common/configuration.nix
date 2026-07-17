@@ -84,6 +84,7 @@
     discord
     spotify
     copilot-language-server
+    flameshot
   ];
 
   # Fonts
