@@ -4,6 +4,11 @@
   # Networking
   networking.networkmanager.enable = true;
 
+  # Allow the phone-import app's local web server (walks 47820->47829 on conflict)
+  networking.firewall.allowedTCPPortRanges = [
+    { from = 47820; to = 47829; }
+  ];
+
   # Timezone & Locale
   time.timeZone = "America/Denver";
 
