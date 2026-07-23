@@ -115,8 +115,8 @@ sudo nixos-rebuild switch --flake .#laptop
 
 4. Run the first rebuild explicitly (hostname hasn't been set yet, so `just switch` won't work):
    ```sh
-   sudo nixos-rebuild switch --flake .#desktop   # on the desktop
-   sudo nixos-rebuild switch --flake .#laptop     # on the laptop
+   sudo nixos-rebuild switch --flake '.#desktop'   # on the desktop
+   sudo nixos-rebuild switch --flake '.#laptop'     # on the laptop
    ```
 
 5. Reboot. Your hostname is now set, and `just switch` works from here on.
