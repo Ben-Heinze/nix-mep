@@ -99,7 +99,7 @@ mykeyboardlayout = awful.widget.keyboardlayout()
 mytextclock = wibox.widget.textclock("%a %b %d  %I:%M %p")
 
 local mybattery = awful.widget.watch(
-    {"bash", "-c", "cat /sys/class/power_supply/BAT0/capacity /sys/class/power_supply/BAT0/status 2>/dev/null"},
+    {"bash", "-c", "cat /sys/class/power_supply/BAT*/capacity /sys/class/power_supply/BAT*/status 2>/dev/null"},
     30,
     function(widget, stdout)
         local lines = {}
@@ -169,20 +169,93 @@ local mynet = awful.widget.watch(
 )
 
 local myvolume = awful.widget.watch(
-    {"bash", "-c", "server=\"unix:/run/user/$(id -u)/pulse/native\"; sink=$(pactl --server=\"$server\" get-default-sink 2>/dev/null); vol=$(pactl --server=\"$server\" get-sink-volume \"$sink\" 2>/dev/null | grep -o '[0-9]*%' | head -1 | tr -d '%'); mute=$(pactl --server=\"$server\" get-sink-mute \"$sink\" 2>/dev/null | awk '/Mute:/{print $2}'); echo \"${vol:-?}\"; echo \"${mute:-no}\""},
+    {"bash", "-c", "export XDG_RUNTIME_DIR=/run/user/$(id -u); wpctl get-volume @DEFAULT_AUDIO_SINK@"},
     2,
     function(widget, stdout)
-        local lines = {}
-        for line in stdout:gmatch("[^\n]+") do table.insert(lines, line) end
-        local vol   = lines[1] or "?"
-        local muted = lines[2] and lines[2]:find("yes")
-        if muted then
+        local vol = stdout:match("(%d+%.%d+)")
+        if not vol then
+            widget:set_text("VOL ?%")
+        elseif stdout:find("MUTED") then
             widget:set_text("VOL muted")
         else
-            widget:set_text("VOL " .. vol .. "%")
+            widget:set_text("VOL " .. math.floor(tonumber(vol) * 100 + 0.5) .. "%")
         end
     end
 )
+
+-- The surfacepro's hardware volume rocker should unmute on press (phone-style);
+-- other hosts keep plain volume-key behavior.
+local is_surfacepro = false
+do
+    local f = io.open("/proc/sys/kernel/hostname")
+    if f then
+        is_surfacepro = f:read("*l") == "surfacepro"
+        f:close()
+    end
+end
+
+-- Volume OSD: popup bar shown when the volume keys/buttons are pressed
+local volume_osd_bar = wibox.widget {
+    max_value        = 100,
+    value            = 0,
+    forced_height    = 10,
+    forced_width     = 220,
+    color            = "#5294e2",
+    background_color = "#2f3440",
+    shape            = gears.shape.rounded_bar,
+    bar_shape        = gears.shape.rounded_bar,
+    widget           = wibox.widget.progressbar,
+}
+
+local volume_osd_text = wibox.widget {
+    align  = "center",
+    widget = wibox.widget.textbox,
+}
+
+local volume_osd = awful.popup {
+    widget = {
+        {
+            volume_osd_text,
+            volume_osd_bar,
+            spacing = 8,
+            layout  = wibox.layout.fixed.vertical,
+        },
+        margins = 16,
+        widget  = wibox.container.margin,
+    },
+    bg           = "#1f2229",
+    border_color = "#2f3440",
+    border_width = 1,
+    shape        = function(cr, w, h) gears.shape.rounded_rect(cr, w, h, 12) end,
+    ontop        = true,
+    visible      = false,
+    placement    = function(d)
+        awful.placement.bottom(d, { margins = { bottom = 80 } })
+    end,
+}
+
+local volume_osd_timer = gears.timer {
+    timeout     = 1.5,
+    single_shot = true,
+    callback    = function() volume_osd.visible = false end,
+}
+
+local function show_volume_osd()
+    awful.spawn.easy_async(
+        {"bash", "-c", "export XDG_RUNTIME_DIR=/run/user/$(id -u); wpctl get-volume @DEFAULT_AUDIO_SINK@"},
+        function(stdout)
+            local vol   = stdout:match("(%d+%.%d+)")
+            local pct   = vol and math.floor(tonumber(vol) * 100 + 0.5) or 0
+            local muted = stdout:find("MUTED")
+            volume_osd_bar.value = pct
+            volume_osd_bar.color = muted and "#6b7685" or "#5294e2"
+            volume_osd_text.text = muted and "Muted" or ("Volume " .. pct .. "%")
+            volume_osd.visible = true
+            volume_osd_timer:stop()
+            volume_osd_timer:start()
+        end
+    )
+end
 
 local taglist_buttons = gears.table.join(
                     awful.button({ }, 1, function(t) t:view_only() end),
@@ -402,13 +475,27 @@ globalkeys = gears.table.join(
               function () awful.spawn("brightnessctl set 10%-") end,
               {description = "decrease brightness", group = "system"}),
     awful.key({ }, "XF86AudioRaiseVolume",
-              function () awful.spawn("bash -c 'export XDG_RUNTIME_DIR=/run/user/$(id -u); pactl set-sink-volume $(pactl get-default-sink) +5%'") end,
+              function ()
+                  local unmute = is_surfacepro and "wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; " or ""
+                  awful.spawn.easy_async(
+                      {"bash", "-c", "export XDG_RUNTIME_DIR=/run/user/$(id -u); " .. unmute .. "wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+"},
+                      show_volume_osd)
+              end,
               {description = "raise volume", group = "media"}),
     awful.key({ }, "XF86AudioLowerVolume",
-              function () awful.spawn("bash -c 'export XDG_RUNTIME_DIR=/run/user/$(id -u); pactl set-sink-volume $(pactl get-default-sink) -5%'") end,
+              function ()
+                  local unmute = is_surfacepro and "wpctl set-mute @DEFAULT_AUDIO_SINK@ 0; " or ""
+                  awful.spawn.easy_async(
+                      {"bash", "-c", "export XDG_RUNTIME_DIR=/run/user/$(id -u); " .. unmute .. "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"},
+                      show_volume_osd)
+              end,
               {description = "lower volume", group = "media"}),
     awful.key({ }, "XF86AudioMute",
-              function () awful.spawn("bash -c 'export XDG_RUNTIME_DIR=/run/user/$(id -u); pactl set-sink-mute $(pactl get-default-sink) toggle'") end,
+              function ()
+                  awful.spawn.easy_async(
+                      {"bash", "-c", "export XDG_RUNTIME_DIR=/run/user/$(id -u); wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"},
+                      show_volume_osd)
+              end,
               {description = "toggle mute", group = "media"})
 )
 

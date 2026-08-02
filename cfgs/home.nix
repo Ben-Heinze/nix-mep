@@ -87,6 +87,8 @@ programs.kitty = {
   xdg.configFile."awesome/rc.lua".source = pkgs.replaceVars ./rc.lua {
     feh = pkgs.feh;
     wallpaper = ../wallpaper.png;
+    # wpctl's @DEFAULT_AUDIO_SINK@ is not a substitution placeholder
+    DEFAULT_AUDIO_SINK = null;
   };
 }
 
