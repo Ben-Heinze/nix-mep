@@ -1,27 +1,30 @@
 # nix-mep
 
-NixOS configuration for two machines — a **laptop** (work) and a **desktop** (home) — managed from a single repository using Nix flakes and home-manager.
+NixOS configuration for three machines — an **xps15** laptop, a **surfacepro** (Surface Pro 7+) laptop, and a **desktop** (home) — managed from a single repository using Nix flakes and home-manager.
 
 ## Repository Structure
 
 ```
-flake.nix                       # Entry point — defines both machine configurations
+flake.nix                       # Entry point — defines all machine configurations
 flake.lock                      # Pinned dependency versions
 justfile                        # Shortcut commands (build, switch, etc.)
 
 common/
-  configuration.nix                   # Shared system config (both machines get this)
+  configuration.nix                   # Shared system config (all machines get this)
 
 hosts/
-  laptop/
-    configuration.nix                 # Laptop-specific config
-    hardware-configuration.nix  # Laptop hardware (auto-generated, do not edit)
+  xps15/
+    configuration.nix                 # XPS 15 laptop-specific config
+    hardware-configuration.nix  # XPS 15 hardware (auto-generated, do not edit)
+  surfacepro/
+    configuration.nix                 # Surface Pro 7+ laptop-specific config
+    hardware-configuration.nix  # Surface Pro hardware (auto-generated, do not edit)
   desktop/
     configuration.nix                 # Desktop-specific config
     hardware-configuration.nix  # Desktop hardware (auto-generated, do not edit)
 
 cfgs/
-  home.nix                      # Home-manager config (shared by both machines)
+  home.nix                      # Home-manager config (shared by all machines)
   rc.lua                        # AwesomeWM configuration
   bashrc                        # Bash aliases and settings
 
@@ -33,11 +36,11 @@ jordansStuff/                   # Archived config (not used)
 
 ### Flake Structure
 
-The `flake.nix` defines two NixOS configurations: `laptop` and `desktop`. Each one imports:
+The `flake.nix` defines three NixOS configurations: `xps15`, `surfacepro`, and `desktop`. Each one imports:
 
 1. **`common/configuration.nix`** — Everything shared: networking, audio (PipeWire), display manager (SDDM), desktop environments (KDE Plasma + AwesomeWM), kanata keybinds, system packages, inputrc, etc.
 2. **`hosts/<machine>/configuration.nix`** — Machine-specific overrides: bootloader, GPU drivers, keyboard device paths, display scaling, and packages only needed on that machine.
-3. **`cfgs/home.nix`** — Home-manager configuration applied to the `ben` user on both machines. Manages dotfiles, terminal (kitty), shell (bash + starship), direnv, rofi, and the AwesomeWM rc.lua.
+3. **`cfgs/home.nix`** — Home-manager configuration applied to the `ben` user on all machines. Manages dotfiles, terminal (kitty), shell (bash + starship), direnv, rofi, and the AwesomeWM rc.lua.
 
 NixOS's module system merges all three layers. Lists (like `environment.systemPackages`) get concatenated. Scalar values set in a host override those in common.
 
@@ -45,8 +48,9 @@ NixOS's module system merges all three layers. Lists (like `environment.systemPa
 
 | Config | Location |
 |---|---|
-| Shared between both machines | `common/configuration.nix` |
-| Laptop-only (4K DPI, GRUB, kanata device path) | `hosts/laptop/configuration.nix` |
+| Shared between all machines | `common/configuration.nix` |
+| XPS 15-only (4K DPI, GRUB, kanata device path) | `hosts/xps15/configuration.nix` |
+| Surface Pro-only (4K DPI, GRUB, kanata device path) | `hosts/surfacepro/configuration.nix` |
 | Desktop-only (Steam, bluetooth, AMD GPU, Discord) | `hosts/desktop/configuration.nix` |
 | User dotfiles, terminal, shell config | `cfgs/home.nix` |
 | AwesomeWM layout and keybinds | `cfgs/rc.lua` |
@@ -54,15 +58,15 @@ NixOS's module system merges all three layers. Lists (like `environment.systemPa
 
 ### Kanata (Keyboard Remapping)
 
-Both machines share the same kanata keybind configuration (defined in `common/configuration.nix`), which remaps:
+All machines share the same kanata keybind configuration (defined in `common/configuration.nix`), which remaps:
 - **Caps Lock** to Escape on tap, Ctrl on hold
 - **Right Shift** to Super (Mod key)
 
-The laptop targets its built-in keyboard by device path. The desktop grabs all keyboards (no device filter), which works fine with a single keyboard. To target a specific keyboard on the desktop, find your device with `ls /dev/input/by-id/` and uncomment the `devices` option in `hosts/desktop/configuration.nix`.
+Each laptop targets its built-in keyboard by device path (set in its `hosts/<machine>/configuration.nix`). The desktop grabs all keyboards (no device filter), which works fine with a single keyboard. To target a specific keyboard on the desktop, find your device with `ls /dev/input/by-id/` and uncomment the `devices` option in `hosts/desktop/configuration.nix`.
 
 ### Hostnames
 
-The laptop's hostname is `laptop`. The desktop's hostname is `desktop`. The justfile uses `hostname` to automatically select the correct flake configuration, so `just switch` works on both machines without arguments.
+Each machine's hostname matches its flake configuration name: `xps15`, `surfacepro`, and `desktop`. The justfile uses `hostname` to automatically select the correct flake configuration, so `just switch` works on every machine without arguments.
 
 ## Commands
 
@@ -92,7 +96,8 @@ If you ever need to build a specific machine's config (e.g., from a fresh instal
 
 ```sh
 sudo nixos-rebuild switch --flake .#desktop
-sudo nixos-rebuild switch --flake .#laptop
+sudo nixos-rebuild switch --flake .#xps15
+sudo nixos-rebuild switch --flake .#surfacepro
 ```
 
 ## First-Time Setup
@@ -106,7 +111,7 @@ sudo nixos-rebuild switch --flake .#laptop
    cd ~/projects/nix-mep
    ```
 
-2. If this is not Ben's **desktop or laptop**, replace `hosts/desktop/hardware-configuration.nix` with the one generated by your install (found at `/etc/nixos/hardware-configuration.nix`).
+2. If this is not one of Ben's machines, replace the `hosts/<machine>/hardware-configuration.nix` you plan to use with the one generated by your install (found at `/etc/nixos/hardware-configuration.nix`).
 
 3. If you are not **Ben**, replace every occurrence of the username `ben` with your own username in these three spots:
    - `flake.nix` — `home-manager.users.ben = import ./cfgs/home.nix;`
@@ -115,8 +120,9 @@ sudo nixos-rebuild switch --flake .#laptop
 
 4. Run the first rebuild explicitly (hostname hasn't been set yet, so `just switch` won't work):
    ```sh
-   sudo nixos-rebuild switch --flake '.#desktop'   # on the desktop
-   sudo nixos-rebuild switch --flake '.#laptop'     # on the laptop
+   sudo nixos-rebuild switch --flake '.#desktop'      # on the desktop
+   sudo nixos-rebuild switch --flake '.#xps15'        # on the XPS 15
+   sudo nixos-rebuild switch --flake '.#surfacepro'   # on the Surface Pro
    ```
 
 5. Reboot. Your hostname is now set, and `just switch` works from here on.
@@ -134,19 +140,19 @@ Editing existing tracked files does **not** require `git add` — Nix reads your
 
 ## Making Changes
 
-### Adding a package to both machines
+### Adding a package to all machines
 Edit `common/configuration.nix` and add it to `environment.systemPackages`.
 
 ### Adding a package to only one machine
-Edit `hosts/laptop/configuration.nix` or `hosts/desktop/configuration.nix` and add it to `environment.systemPackages`.
+Edit that machine's `hosts/<machine>/configuration.nix` (e.g., `hosts/xps15/configuration.nix`) and add it to `environment.systemPackages`.
 
 ### Adding a user-level package or dotfile
 Edit `cfgs/home.nix` and add it to `home.packages` or configure it under `programs.*`.
 
 ### Changing kanata keybinds
-Edit the kanata config in `common/configuration.nix`. The keybinds apply to both machines.
+Edit the kanata config in `common/configuration.nix`. The keybinds apply to all machines.
 
 ### Changing the AwesomeWM config
-Edit `cfgs/rc.lua`. This is shared by both machines via home-manager.
+Edit `cfgs/rc.lua`. This is shared by all machines via home-manager.
 
 After any change, run `just switch` to apply.

@@ -1,5 +1,5 @@
 {
-  description = "NixOS configurations for laptop and desktop";
+  description = "NixOS configurations for xps15, surfacepro, and desktop";
 
   inputs = {
     flake-parts.url = "github:hercules-ci/flake-parts";
@@ -35,11 +35,25 @@
       home-manager.users.ben = import ./cfgs/home.nix;
     };
   in {
-    nixosConfigurations.laptop = nixpkgs.lib.nixosSystem {
+    nixosConfigurations.xps15 = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       modules = [
         ./common/configuration.nix
-        ./hosts/laptop/configuration.nix
+        ./hosts/xps15/configuration.nix
+        home-manager-stable.nixosModules.home-manager
+        homeManagerModule
+      ];
+      specialArgs = {
+        inherit inputs;
+        inherit unstablePkgs;
+      };
+    };
+
+    nixosConfigurations.surfacepro = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        ./common/configuration.nix
+        ./hosts/surfacepro/configuration.nix
         home-manager-stable.nixosModules.home-manager
         homeManagerModule
       ];

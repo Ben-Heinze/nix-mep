@@ -5,7 +5,7 @@
     ./hardware-configuration.nix
   ];
 
-  networking.hostName = "laptop";
+  networking.hostName = "xps15";
 
   # 4K display scaling
   services.xserver.dpi = 192;
