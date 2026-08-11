@@ -1,5 +1,31 @@
 { config, pkgs, unstablePkgs, ... }:
 
+let
+  # Spotify's Chromium/Electron backend leaves a SingletonLock (+ SingletonSocket/
+  # SingletonCookie) in ~/.cache/spotify. If the hostname changes or the machine
+  # loses power uncleanly, that lock can point at a process that no longer exists,
+  # and Spotify silently no-ops on launch instead of starting. This wrapper clears
+  # the lock files before exec'ing the real binary, but only when no Spotify
+  # process is actually running, so a genuinely running instance is left alone.
+  # NOTE: this shadows `pkgs.spotify` in the `with pkgs; [ ... spotify ... ]` list
+  # below via lexical scoping, so the rest of that list is unaffected.
+  spotify = pkgs.symlinkJoin {
+    name = "spotify";
+    paths = [ pkgs.spotify ];
+    nativeBuildInputs = [ pkgs.makeWrapper ];
+    postBuild = ''
+      rm "$out/bin/spotify"
+      makeWrapper ${pkgs.spotify}/bin/spotify "$out/bin/spotify" \
+        --run '
+          cache_dir="$HOME/.cache/spotify"
+          if [ -e "$cache_dir/SingletonLock" ] && ! ${pkgs.procps}/bin/pgrep -f "share/spotify/.spotify-wrapped" >/dev/null 2>&1; then
+            rm -f "$cache_dir/SingletonLock" "$cache_dir/SingletonSocket" "$cache_dir/SingletonCookie"
+          fi
+        '
+    '';
+  };
+in
+
 {
   # Networking
   networking.networkmanager.enable = true;
@@ -75,6 +101,7 @@
     rofi
     zathura
     kitty
+    yazi
     direnv
     neofetch
     starship

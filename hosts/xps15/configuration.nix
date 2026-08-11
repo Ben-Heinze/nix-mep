@@ -31,6 +31,16 @@
     EOF
   '';
 
+  # {{{ Bluetooth
+
+  hardware.bluetooth = {
+    enable = true;
+    powerOnBoot = true;
+  };
+  services.blueman.enable = true;
+
+  # }}} Bluetooth
+
   # {{{ Bootloader (GRUB with OS-prober for dual-boot)
 
   boot.supportedFilesystems = [ "ntfs" ];

@@ -168,6 +168,21 @@ local mynet = awful.widget.watch(
     end
 )
 
+local mybluetooth = awful.widget.watch(
+    {"bash", "-c", "if bluetoothctl show 2>/dev/null | grep -q 'Powered: yes'; then devs=$(bluetoothctl devices Connected 2>/dev/null | cut -d' ' -f3- | paste -sd, -); if [ -z \"$devs\" ]; then echo on; else echo \"$devs\"; fi; else echo off; fi"},
+    15,
+    function(widget, stdout)
+        local text = stdout:gsub("%s+$", "")
+        if text == "" or text == "off" then
+            widget:set_text("BT off")
+        elseif text == "on" then
+            widget:set_text("BT on")
+        else
+            widget:set_text("BT " .. text)
+        end
+    end
+)
+
 local myvolume = awful.widget.watch(
     {"bash", "-c", "export XDG_RUNTIME_DIR=/run/user/$(id -u); wpctl get-volume @DEFAULT_AUDIO_SINK@"},
     2,
@@ -359,6 +374,7 @@ awful.screen.connect_for_each_screen(function(s)
             pill(myram,       "#1a3a20"),
             pill(mydisk,      "#2e2800"),
             pill(mynet,       "#0f2e2e"),
+            pill(mybluetooth, "#102a43"),
             pill(myvolume,    "#2a1a40"),
             pill(mybattery,   "#1a2e4a"),
             pill(mytextclock, "#1e2a50"),

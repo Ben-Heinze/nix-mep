@@ -27,7 +27,6 @@ in
   pkgs.htop
   pkgs.zathura
   pkgs.taskwarrior-tui
-  pkgs.yazi
   pkgs.ripgrep
   pkgs.xclip
   pkgs.nerd-fonts.ubuntu-mono
@@ -56,6 +55,16 @@ in
   };
 
 
+
+programs.yazi = {
+  enable = true;
+  settings = {
+    manager = {
+      ratio = [ 1 4 1 ];
+      show_hidden = false;
+    };
+  };
+};
 
 programs.kitty = {
   enable = true;
