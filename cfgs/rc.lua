@@ -183,6 +183,13 @@ local mybluetooth = awful.widget.watch(
     end
 )
 
+local mybluetooth_pill = pill(mybluetooth, "#102a43")
+mybluetooth_pill:buttons(gears.table.join(
+    awful.button({ }, 1, function()
+        awful.spawn("blueman-manager")
+    end)
+))
+
 local myvolume = awful.widget.watch(
     {"bash", "-c", "export XDG_RUNTIME_DIR=/run/user/$(id -u); wpctl get-volume @DEFAULT_AUDIO_SINK@"},
     2,
@@ -271,6 +278,125 @@ local function show_volume_osd()
         end
     )
 end
+
+-- {{{ Pomodoro timer
+local pomodoro_work_secs  = 25 * 60
+local pomodoro_break_secs = 5 * 60
+
+local pomodoro_widget = wibox.widget.textbox()
+local pomodoro_state = "idle" -- "idle" | "work" | "break"
+local pomodoro_remaining = 0
+local pomodoro_paused = false
+local pomodoro_color_normal = "#4a1a2e"
+local pomodoro_color_ready  = "#e63946"
+local pomodoro_color_paused = "#e6c200"
+local pomodoro_fg_paused = "#333333"
+local pomodoro_pill -- forward declaration; assigned once the pill widget is created below
+
+local function pomodoro_format(secs)
+    return string.format("%02d:%02d", math.floor(secs / 60), secs % 60)
+end
+
+local function pomodoro_update_text()
+    if pomodoro_state == "work" then
+        pomodoro_widget:set_text("POM " .. pomodoro_format(pomodoro_remaining))
+    elseif pomodoro_state == "break" then
+        pomodoro_widget:set_text("BRK " .. pomodoro_format(pomodoro_remaining))
+    else
+        pomodoro_widget:set_text("POM Ready")
+    end
+    if pomodoro_pill then
+        if pomodoro_paused then
+            pomodoro_pill.bg = pomodoro_color_paused
+            pomodoro_pill.fg = pomodoro_fg_paused
+        elseif pomodoro_state == "idle" then
+            pomodoro_pill.bg = pomodoro_color_ready
+            pomodoro_pill.fg = nil
+        else
+            pomodoro_pill.bg = pomodoro_color_normal
+            pomodoro_pill.fg = nil
+        end
+    end
+end
+
+local pomodoro_timer
+pomodoro_timer = gears.timer {
+    timeout   = 1,
+    autostart = false,
+    callback  = function()
+        pomodoro_remaining = pomodoro_remaining - 1
+        if pomodoro_remaining <= 0 then
+            if pomodoro_state == "work" then
+                naughty.notify({
+                    title   = "Pomodoro",
+                    text    = "Work session done — take a 5 minute break.",
+                    timeout = 10,
+                })
+                pomodoro_state = "break"
+                pomodoro_remaining = pomodoro_break_secs
+            else
+                naughty.notify({
+                    title   = "Pomodoro",
+                    text    = "Break's over. Click the timer to start another pomodoro.",
+                    timeout = 10,
+                })
+                pomodoro_state = "idle"
+                pomodoro_paused = false
+                pomodoro_remaining = 0
+                pomodoro_timer:stop()
+            end
+        end
+        pomodoro_update_text()
+    end,
+}
+
+local function pomodoro_start()
+    pomodoro_state = "work"
+    pomodoro_paused = false
+    pomodoro_remaining = pomodoro_work_secs
+    pomodoro_update_text()
+    pomodoro_timer:start()
+end
+
+local function pomodoro_pause()
+    pomodoro_timer:stop()
+    pomodoro_paused = true
+    pomodoro_update_text()
+end
+
+local function pomodoro_resume()
+    pomodoro_paused = false
+    pomodoro_timer:start()
+    pomodoro_update_text()
+end
+
+local function pomodoro_reset()
+    pomodoro_timer:stop()
+    pomodoro_state = "idle"
+    pomodoro_paused = false
+    pomodoro_remaining = 0
+    pomodoro_update_text()
+end
+
+pomodoro_pill = pill(pomodoro_widget, pomodoro_color_ready)
+pomodoro_update_text()
+
+pomodoro_pill:buttons(gears.table.join(
+    awful.button({ }, 1, function()
+        if pomodoro_state == "idle" then
+            pomodoro_start()
+        elseif pomodoro_paused then
+            pomodoro_resume()
+        else
+            pomodoro_pause()
+        end
+    end),
+    awful.button({ }, 3, function()
+        pomodoro_reset()
+    end)
+))
+
+-- }}} Pomodoro timer
 
 local taglist_buttons = gears.table.join(
                     awful.button({ }, 1, function(t) t:view_only() end),
@@ -374,8 +500,9 @@ awful.screen.connect_for_each_screen(function(s)
             pill(myram,       "#1a3a20"),
             pill(mydisk,      "#2e2800"),
             pill(mynet,       "#0f2e2e"),
-            pill(mybluetooth, "#102a43"),
+            mybluetooth_pill,
             pill(myvolume,    "#2a1a40"),
+            pomodoro_pill,
             pill(mybattery,   "#1a2e4a"),
             pill(mytextclock, "#1e2a50"),
             wibox.container.margin(s.mylayoutbox, 4, 10, 8, 8),
