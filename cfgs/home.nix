@@ -36,6 +36,7 @@ in
     enable = true;
     font = "monospace 24";
     theme = "Arc-Dark";
+    terminal = "kitty";
   };
 
   programs.direnv = {

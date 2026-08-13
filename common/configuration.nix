@@ -117,6 +117,9 @@ in
     spotify
     copilot-language-server
     flameshot
+    libreoffice
+    unzip
+    p7zip
   ];
 
   # Fonts
@@ -124,7 +127,7 @@ in
     nerd-fonts.jetbrains-mono
   ];
 
-  # {{{ Kanata (shared keybinds across all machines)
+  # {{create edges b{ Kanata (shared keybinds across all machines)
 
   boot.kernelModules = [ "uinput" ];
   hardware.uinput.enable = true;
