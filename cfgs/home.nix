@@ -25,6 +25,19 @@ let
   '';
 in
 
+let
+  neovimDesktopEntry = ''
+    [Desktop Entry]
+    Version=0.1
+    Name=Neovim (MiseEnPlace)
+    Exec=kitty -e nix run --refresh "github:Ben-Heinze/nvmep2" --extra-experimental-features flakes --extra-experimental-features nix-command %U
+    Type=Application
+    Terminal=false
+    Categories=Development;TextEditor;
+    StartupNotify=true
+  '';
+in
+
 {
   home.username = "ben";
   home.homeDirectory = "/home/ben";
@@ -102,6 +115,8 @@ programs.kitty = {
 
 
   home.file.".local/share/applications/emacs.desktop".text = emacsDesktopEntry;
+  home.file.".local/share/applications/timeline.desktop".text = timelineDesktopEntry;
+  home.file.".local/share/applications/neovim.desktop".text = neovimDesktopEntry;
 
 
   programs.home-manager.enable = true;
