@@ -27,10 +27,18 @@
     };
   };
 
-  # {{{ Bootloader (systemd-boot)
+  # {{{ Bootloader (GRUB with OS-prober for dual-boot)
+  # Windows lives on a separate disk (sdb1 EFI) from NixOS (nvme0n1p2 EFI).
+  # systemd-boot only scans its own ESP, so it can't see Windows. GRUB's
+  # os-prober scans all disks and adds a Windows entry automatically.
 
-  boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
+  boot.loader.grub.enable = true;
+  boot.loader.grub.device = "nodev";
+  boot.loader.grub.useOSProber = true;
+  boot.loader.grub.efiSupport = true;
+  boot.loader.efi.efiSysMountPoint = "/boot";
+  boot.loader.timeout = 10; # seconds the menu stays up before booting NixOS
 
   # }}} Bootloader
 
