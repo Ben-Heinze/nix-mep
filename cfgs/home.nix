@@ -29,7 +29,7 @@ let
   neovimDesktopEntry = ''
     [Desktop Entry]
     Version=0.1
-    Name=Neovim (MiseEnPlace)
+    Name=Neovim (Mise En Place)
     Exec=kitty -e nix run --refresh "github:Ben-Heinze/nvmep2" --extra-experimental-features flakes --extra-experimental-features nix-command %U
     Type=Application
     Terminal=false
@@ -117,6 +117,13 @@ programs.kitty = {
   home.file.".local/share/applications/emacs.desktop".text = emacsDesktopEntry;
   home.file.".local/share/applications/timeline.desktop".text = timelineDesktopEntry;
   home.file.".local/share/applications/neovim.desktop".text = neovimDesktopEntry;
+  # Hide the neovim package's own "Neovim (Text Editor)" entry so only the flake one shows
+  home.file.".local/share/applications/nvim.desktop".text = ''
+    [Desktop Entry]
+    Name=Neovim
+    NoDisplay=true
+    Type=Application
+  '';
 
 
   programs.home-manager.enable = true;
