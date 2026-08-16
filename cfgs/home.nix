@@ -13,6 +13,18 @@ let
   '';
 in
 
+let
+  timelineDesktopEntry = ''
+    [Desktop Entry]
+    Version=0.1
+    Name=Timeline
+    Exec=nix run --refresh "github:Ben-Heinze/timeline" %U
+    Type=Application
+    Categories=Graphics;Viewer;
+    StartupNotify=true
+  '';
+in
+
 {
   home.username = "ben";
   home.homeDirectory = "/home/ben";
