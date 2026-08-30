@@ -77,6 +77,38 @@ in
     pulse.enable = true;
   };
 
+  # Follow the source's native rate (e.g. 44.1 kHz music) instead of always
+  # resampling to 48 kHz. Harmless on devices that only do 48 kHz; a small
+  # quality win on capable DACs (e.g. the desktop's PreSonus AudioBox USB 96,
+  # which does up to 96 kHz). Sample rate does not affect wired latency.
+  services.pipewire.extraConfig.pipewire."10-clock-rate" = {
+    "context.properties" = {
+      "default.clock.rate" = 48000;
+      "default.clock.allowed-rates" = [ 44100 48000 88200 96000 ];
+    };
+  };
+
+  # Bluetooth audio tuning (applies wherever hardware.bluetooth is enabled;
+  # a harmless no-op otherwise). Tuned for Sony WH-1000XM6 but generic.
+  #  - Listening (A2DP): force SBC-XQ/SBC instead of LDAC. Every A2DP codec
+  #    buffers audio and LDAC is the highest-latency (~150-250ms); SBC drops it
+  #    toward ~100ms (the A2DP floor). Remove bluez5.codecs to get LDAC quality
+  #    back at higher latency. For lossless + low latency, use a wired path.
+  #  - Mic active, e.g. Discord (HFP): mSBC + LC3 super-wideband instead of the
+  #    old 8 kHz narrowband (LC3-SWB needs bluez Experimental = true).
+  #  Protocol limit: a Bluetooth Classic link can't carry hi-fi audio AND the mic
+  #  at once, so listening quality drops to HFP wideband while the mic is live.
+  #  To keep A2DP hi-fi during voice chat, pick a separate mic as the app input.
+  services.pipewire.wireplumber.extraConfig."51-bluez-codecs" = {
+    "monitor.bluez.properties" = {
+      "bluez5.enable-sbc-xq" = true;
+      "bluez5.enable-msbc" = true;
+      "bluez5.enable-hw-volume" = true;
+      "bluez5.roles" = [ "a2dp_sink" "a2dp_source" "bap_sink" "bap_source" "hfp_hf" "hfp_ag" ];
+      "bluez5.codecs" = [ "sbc_xq" "sbc" ];
+    };
+  };
+
   # User account
   users.users.ben = {
     isNormalUser = true;
