@@ -114,5 +114,6 @@
     pasystray
     xorg.xmodmap
     xorg.xev
+    prismlauncher
   ];
 }
