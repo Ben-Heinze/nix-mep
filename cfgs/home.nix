@@ -38,6 +38,18 @@ let
   '';
 in
 
+let
+  mepDesktopEntry = ''
+    [Desktop Entry]
+    Version=0.1
+    Name=Mep (Mise En Place)
+    Exec=kitty -e nix run --refresh "github:jordanschupbach/mep" --extra-experimental-features flakes --extra-experimental-features nix-command %U
+    Type=Application
+    Terminal=false
+    Categories=Development;TextEditor;
+    StartupNotify=true
+  '';
+in
 {
   home.username = "ben";
   home.homeDirectory = "/home/ben";
@@ -117,6 +129,7 @@ programs.kitty = {
   home.file.".local/share/applications/emacs.desktop".text = emacsDesktopEntry;
   home.file.".local/share/applications/timeline.desktop".text = timelineDesktopEntry;
   home.file.".local/share/applications/neovim.desktop".text = neovimDesktopEntry;
+  home.file.".local/share/applications/mep.desktop".text = mepDesktopEntry;
   # Hide the neovim package's own "Neovim (Text Editor)" entry so only the flake one shows
   home.file.".local/share/applications/nvim.desktop".text = ''
     [Desktop Entry]

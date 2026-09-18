@@ -1,7 +1,53 @@
 # neovim
 alias neo="nix run --refresh github:Ben-Heinze/nvmep2 --extra-experimental-features flakes --extra-experimental-features nix-command"
+alias mep="nix run --refresh github:jordanschupbach/mep --extra-experimental-features flakes --extra-experimental-features nix-command"
 # emacs
 alias emc="nix run --refresh github:jordanschupbach/emc --extra-experimental-features flakes --extra-experimental-features nix-command -- -nw"
 
 # nix configuration
 alias nixconf="sudo vim /etc/nixos/configuration.nix"
+
+# live elapsed-time display while a command runs, e.g.: stopwatch python myscript.py
+stopwatch() {
+  "$@" &
+  local pid=$! start=$SECONDS
+  while kill -0 "$pid" 2>/dev/null; do
+    printf '\r\033[K⏱  %02d:%02d ' $(( (SECONDS-start)/60 )) $(( (SECONDS-start)%60 ))
+    sleep 1
+  done
+  wait "$pid"; local rc=$?
+  printf '\r\033[K✓ finished in %02d:%02d (exit %d)\n' $(( (SECONDS-start)/60 )) $(( (SECONDS-start)%60 )) "$rc"
+  return "$rc"
+}
+
+
+
+# mep-dev file.pdf --> main checkout
+# mep-dev pdf-nav file.pdf --> the pdf-nav worktree
+mep-dev() {
+  local dir="$HOME/git_repos/mep"
+  if [ -n "$1" ] && [ -d "$HOME/git_repos/mep.worktrees/$1" ]; then 
+    dir="$HOME/git_repos/mep.worktrees/$1"
+    shift 
+  fi 
+  (cd "$dir" && nix develop -c just build-native) || return 1
+  # same env setup as 'just run' 
+  local ts="$dir/.ts-grammars/lib" ts_path=""
+  [ -d "$ts" ] && ts_path="$(realpath "$ts")${MEP_TS_PARSER_PATH:+:$MEP_TS_PARSER_PATH}"
+  MEP_TS_PARSER_PATH="$ts_path" \
+  MEP_BROWSER_LAUNCHER="$(realpath "$dir/launcher/browser.ts")" \
+    "$dir/build/native/mep" "$@"
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

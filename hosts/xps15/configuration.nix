@@ -53,11 +53,35 @@
 
   # }}} Bootloader
 
+  # {{{ NVIDIA dGPU (GTX 1050 Ti) — the HDMI port is wired through it
+
+  services.xserver.videoDrivers = [ "nvidia" ];
+  hardware.graphics.enable = true;
+  hardware.nvidia = {
+    modesetting.enable = true;
+    powerManagement.enable = true;
+    open = false; # GTX 1050 Ti (Pascal) needs the closed kernel module
+    package = config.boot.kernelPackages.nvidiaPackages.stable;
+    prime = {
+      sync.enable = true;
+      intelBusId = "PCI:0:2:0";
+      nvidiaBusId = "PCI:1:0:0";
+    };
+  };
+
+  # }}} NVIDIA dGPU
+
   # Trackpad acceleration
   services.libinput.touchpad.accelSpeed = "0.3";
 
-  # Kanata: target the laptop's built-in keyboard
+  # Kanata: target the laptop's built-in keyboard and the external Das Keyboard
   services.kanata.keyboards.internalKeyboard.devices = [
     "/dev/input/by-path/platform-i8042-serio-0-event-kbd"
+    "/dev/input/by-id/usb-_Das_Keyboard-event-kbd"
+  ];
+
+  # xps15-specific packages
+  environment.systemPackages = with pkgs; [
+    brave
   ];
 }
