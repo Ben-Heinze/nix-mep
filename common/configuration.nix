@@ -130,6 +130,7 @@ in
     just
     git
     unstablePkgs.claude-code
+    unstablePkgs.dopamine
     rofi
     zathura
     kitty
