@@ -27,18 +27,26 @@
     };
   };
 
-  # {{{ Bootloader (GRUB with OS-prober for dual-boot)
-  # Windows lives on a separate disk (sdb1 EFI) from NixOS (nvme0n1p2 EFI).
-  # systemd-boot only scans its own ESP, so it can't see Windows. GRUB's
-  # os-prober scans all disks and adds a Windows entry automatically.
+  # {{{ Bootloader (lanzaboote for Secure Boot dual-boot)
+  # Valorant's Vanguard anti-cheat requires Secure Boot enabled in Windows.
+  # GRUB is unsigned, so Secure Boot had to stay off. Lanzaboote signs the
+  # NixOS bootloader + kernel with our own keys (managed by sbctl) so both
+  # OSes boot with Secure Boot on. Enroll keys with `sbctl enroll-keys
+  # --microsoft` — Microsoft's certs must stay so Windows and the GPU
+  # option ROM still verify.
+  #
+  # Windows lives on a separate disk (sdb1 EFI) from NixOS (nvme0n1p2 EFI),
+  # so systemd-boot's menu can't list it. To boot Windows: run
+  # `reboot-to-windows`, or use the firmware boot menu key at power-on.
 
   boot.loader.efi.canTouchEfiVariables = true;
-  boot.loader.grub.enable = true;
-  boot.loader.grub.device = "nodev";
-  boot.loader.grub.useOSProber = true;
-  boot.loader.grub.efiSupport = true;
   boot.loader.efi.efiSysMountPoint = "/boot";
+  boot.loader.systemd-boot.enable = lib.mkForce false; # lanzaboote replaces it
   boot.loader.timeout = 10; # seconds the menu stays up before booting NixOS
+  boot.lanzaboote = {
+    enable = true;
+    pkiBundle = "/var/lib/sbctl";
+  };
 
   # }}} Bootloader
 
@@ -115,5 +123,17 @@
     xorg.xmodmap
     xorg.xev
     prismlauncher
+    sbctl # Secure Boot key management for lanzaboote
+    efibootmgr
+    (writeShellScriptBin "reboot-to-windows" ''
+      set -euo pipefail
+      entry=$(${efibootmgr}/bin/efibootmgr | grep -i "Windows Boot Manager" | head -n1 | sed 's/^Boot\([0-9A-Fa-f]\{4\}\).*/\1/')
+      if [ -z "$entry" ]; then
+        echo "No 'Windows Boot Manager' entry found in efibootmgr output" >&2
+        exit 1
+      fi
+      sudo ${efibootmgr}/bin/efibootmgr --bootnext "$entry" > /dev/null
+      systemctl reboot
+    '')
   ];
 }

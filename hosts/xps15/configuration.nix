@@ -83,5 +83,6 @@
   # xps15-specific packages
   environment.systemPackages = with pkgs; [
     brave
+    kdePackages.dolphin
   ];
 }

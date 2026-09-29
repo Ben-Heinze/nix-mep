@@ -7,6 +7,8 @@
     home-manager-stable.url = "github:nix-community/home-manager/release-25.11";
     home-manager-unstable.inputs.nixpkgs.follows = "unstable";
     home-manager-unstable.url = "github:nix-community/home-manager";
+    lanzaboote.inputs.nixpkgs.follows = "nixpkgs";
+    lanzaboote.url = "github:nix-community/lanzaboote/v0.4.2";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
     stable.url = "github:NixOS/nixpkgs/nixos-25.11";
     unstable-small.url = "github:NixOS/nixpkgs/nixos-unstable-small";
@@ -68,6 +70,7 @@
       modules = [
         ./common/configuration.nix
         ./hosts/desktop/configuration.nix
+        inputs.lanzaboote.nixosModules.lanzaboote
         home-manager-stable.nixosModules.home-manager
         homeManagerModule
       ];
