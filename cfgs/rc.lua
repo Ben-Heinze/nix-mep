@@ -155,6 +155,52 @@ local mytemp = awful.widget.watch(
     end
 )
 
+-- Live power draw (watts). power_now is absent on this XPS 15, so fall back to
+-- current_now * voltage_now (µA * µV / 1e12 = W). "+" prefix while charging.
+-- Traffic-light thresholds (watts) — tune to taste:
+local watt_low_max = 15   -- <= this is "low"  (green)
+local watt_med_max = 30   -- <= this is "med"  (amber); above is "high" (red)
+local watt_color_low    = "#1a3a20"  -- green
+local watt_color_med    = "#3d2800"  -- amber
+local watt_color_high   = "#3a1515"  -- red
+local watt_color_charge = "#102a43"  -- blue (charging: reading is charge rate)
+
+local mywatt_pill  -- forward declaration; assigned once the pill is created below
+local mywatt = awful.widget.watch(
+    {"bash", "-c", [[
+        b=$(ls -d /sys/class/power_supply/BAT* 2>/dev/null | head -1)
+        [ -z "$b" ] && { echo "?"; exit 0; }
+        st=$(cat "$b/status" 2>/dev/null)
+        pw=$(cat "$b/power_now" 2>/dev/null)
+        cn=$(cat "$b/current_now" 2>/dev/null)
+        vn=$(cat "$b/voltage_now" 2>/dev/null)
+        awk -v pw="$pw" -v cn="$cn" -v vn="$vn" -v st="$st" 'BEGIN{
+            w = (pw+0>0) ? pw/1e6 : (cn+0)*(vn+0)/1e12
+            printf "%s%.1f", (st=="Charging") ? "+" : "", w
+        }'
+    ]]},
+    5,
+    function(widget, stdout)
+        local s = stdout:gsub("%s+", "")
+        widget:set_text("PWR " .. s .. "W")
+        if mywatt_pill then
+            local val = tonumber(s:match("[%d%.]+"))
+            if s:sub(1, 1) == "+" then
+                mywatt_pill.bg = watt_color_charge   -- charging
+            elseif not val then
+                mywatt_pill.bg = watt_color_med      -- unknown ("?")
+            elseif val <= watt_low_max then
+                mywatt_pill.bg = watt_color_low
+            elseif val <= watt_med_max then
+                mywatt_pill.bg = watt_color_med
+            else
+                mywatt_pill.bg = watt_color_high
+            end
+        end
+    end
+)
+mywatt_pill = pill(mywatt, watt_color_low)
+
 local mynet = awful.widget.watch(
     {"bash", "-c", "nmcli -t -f active,ssid dev wifi 2>/dev/null | grep '^yes:' | cut -d: -f2-"},
     10,
@@ -279,125 +325,6 @@ local function show_volume_osd()
     )
 end
 
--- {{{ Pomodoro timer
-local pomodoro_work_secs  = 25 * 60
-local pomodoro_break_secs = 5 * 60
-
-local pomodoro_widget = wibox.widget.textbox()
-local pomodoro_state = "idle" -- "idle" | "work" | "break"
-local pomodoro_remaining = 0
-local pomodoro_paused = false
-local pomodoro_color_normal = "#4a1a2e"
-local pomodoro_color_ready  = "#e63946"
-local pomodoro_color_paused = "#e6c200"
-local pomodoro_fg_paused = "#333333"
-local pomodoro_pill -- forward declaration; assigned once the pill widget is created below
-
-local function pomodoro_format(secs)
-    return string.format("%02d:%02d", math.floor(secs / 60), secs % 60)
-end
-
-local function pomodoro_update_text()
-    if pomodoro_state == "work" then
-        pomodoro_widget:set_text("POM " .. pomodoro_format(pomodoro_remaining))
-    elseif pomodoro_state == "break" then
-        pomodoro_widget:set_text("BRK " .. pomodoro_format(pomodoro_remaining))
-    else
-        pomodoro_widget:set_text("POM Ready")
-    end
-    if pomodoro_pill then
-        if pomodoro_paused then
-            pomodoro_pill.bg = pomodoro_color_paused
-            pomodoro_pill.fg = pomodoro_fg_paused
-        elseif pomodoro_state == "idle" then
-            pomodoro_pill.bg = pomodoro_color_ready
-            pomodoro_pill.fg = nil
-        else
-            pomodoro_pill.bg = pomodoro_color_normal
-            pomodoro_pill.fg = nil
-        end
-    end
-end
-
-local pomodoro_timer
-pomodoro_timer = gears.timer {
-    timeout   = 1,
-    autostart = false,
-    callback  = function()
-        pomodoro_remaining = pomodoro_remaining - 1
-        if pomodoro_remaining <= 0 then
-            if pomodoro_state == "work" then
-                naughty.notify({
-                    title   = "Pomodoro",
-                    text    = "Work session done — take a 5 minute break.",
-                    timeout = 10,
-                })
-                pomodoro_state = "break"
-                pomodoro_remaining = pomodoro_break_secs
-            else
-                naughty.notify({
-                    title   = "Pomodoro",
-                    text    = "Break's over. Click the timer to start another pomodoro.",
-                    timeout = 10,
-                })
-                pomodoro_state = "idle"
-                pomodoro_paused = false
-                pomodoro_remaining = 0
-                pomodoro_timer:stop()
-            end
-        end
-        pomodoro_update_text()
-    end,
-}
-
-local function pomodoro_start()
-    pomodoro_state = "work"
-    pomodoro_paused = false
-    pomodoro_remaining = pomodoro_work_secs
-    pomodoro_update_text()
-    pomodoro_timer:start()
-end
-
-local function pomodoro_pause()
-    pomodoro_timer:stop()
-    pomodoro_paused = true
-    pomodoro_update_text()
-end
-
-local function pomodoro_resume()
-    pomodoro_paused = false
-    pomodoro_timer:start()
-    pomodoro_update_text()
-end
-
-local function pomodoro_reset()
-    pomodoro_timer:stop()
-    pomodoro_state = "idle"
-    pomodoro_paused = false
-    pomodoro_remaining = 0
-    pomodoro_update_text()
-end
-
-pomodoro_pill = pill(pomodoro_widget, pomodoro_color_ready)
-pomodoro_update_text()
-
-pomodoro_pill:buttons(gears.table.join(
-    awful.button({ }, 1, function()
-        if pomodoro_state == "idle" then
-            pomodoro_start()
-        elseif pomodoro_paused then
-            pomodoro_resume()
-        else
-            pomodoro_pause()
-        end
-    end),
-    awful.button({ }, 3, function()
-        pomodoro_reset()
-    end)
-))
-
--- }}} Pomodoro timer
-
 local taglist_buttons = gears.table.join(
                     awful.button({ }, 1, function(t) t:view_only() end),
                     awful.button({ modkey }, 1, function(t)
@@ -502,7 +429,7 @@ awful.screen.connect_for_each_screen(function(s)
             pill(mynet,       "#0f2e2e"),
             mybluetooth_pill,
             pill(myvolume,    "#2a1a40"),
-            pomodoro_pill,
+            mywatt_pill,
             pill(mybattery,   "#1a2e4a"),
             pill(mytextclock, "#1e2a50"),
             wibox.container.margin(s.mylayoutbox, 4, 10, 8, 8),

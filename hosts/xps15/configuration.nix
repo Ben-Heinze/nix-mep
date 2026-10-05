@@ -59,11 +59,21 @@
   hardware.graphics.enable = true;
   hardware.nvidia = {
     modesetting.enable = true;
+    # Runtime power management: lets the dGPU power fully OFF when no offloaded
+    # app is using it. True fine-grained RTD3 is Turing+; the Pascal 1050 Ti
+    # uses coarse-grained runtime PM (whole-GPU power-off), which this enables.
     powerManagement.enable = true;
     open = false; # GTX 1050 Ti (Pascal) needs the closed kernel module
     package = config.boot.kernelPackages.nvidiaPackages.stable;
     prime = {
-      sync.enable = true;
+      # Offload mode: apps default to the Intel iGPU (big battery win vs sync,
+      # which kept the dGPU powered on 24/7). Launch GPU apps with `nvidia-offload`.
+      # NOTE: HDMI is wired through the dGPU — external output may require running
+      # the compositor/app with nvidia-offload, or waking the dGPU first.
+      offload = {
+        enable = true;
+        enableOffloadCmd = true; # provides the `nvidia-offload` wrapper script
+      };
       intelBusId = "PCI:0:2:0";
       nvidiaBusId = "PCI:1:0:0";
     };
@@ -80,9 +90,24 @@
     "/dev/input/by-id/usb-_Das_Keyboard-event-kbd"
   ];
 
+  # {{{ Thermal + power management
+
+  # Intel thermal daemon: actively manages CPU thermals so the package doesn't
+  # sit pinned at ~97 °C and throttle (which felt like sluggishness + fan spin).
+  services.thermald.enable = true;
+
+  # }}} Thermal + power management
+
   # xps15-specific packages
   environment.systemPackages = with pkgs; [
     brave
     kdePackages.dolphin
+
+    # Performance / power monitoring (see notes below)
+    powertop            # per-device power draw + battery estimate
+    btop                # live CPU/mem/process TUI (spot runaway procs)
+    lm_sensors          # `sensors` — CPU/package temps + fan speeds
+    # GPU monitoring: use `nvidia-smi` (ships with the driver). nvtop pulls the
+    # full CUDA toolkit here, which isn't in the binary cache, so it's omitted.
   ];
 }
