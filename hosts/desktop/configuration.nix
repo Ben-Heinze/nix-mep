@@ -35,7 +35,7 @@
   # --microsoft` — Microsoft's certs must stay so Windows and the GPU
   # option ROM still verify.
   #
-  # Windows lives on a separate disk (sdb1 EFI) from NixOS (nvme0n1p2 EFI),
+  # Windows lives on a separate disk (sda1 EFI) from NixOS (nvme0n1p2 EFI),
   # so systemd-boot's menu can't list it. To boot Windows: run
   # `reboot-to-windows`, or use the firmware boot menu key at power-on.
 
@@ -127,7 +127,9 @@
     efibootmgr
     (writeShellScriptBin "reboot-to-windows" ''
       set -euo pipefail
-      entry=$(${efibootmgr}/bin/efibootmgr | grep -i "Windows Boot Manager" | head -n1 | sed 's/^Boot\([0-9A-Fa-f]\{4\}\).*/\1/')
+      # grep exits 1 when Windows is absent; without `|| true` set -e would
+      # kill the script before the message below is printed.
+      entry=$(${efibootmgr}/bin/efibootmgr | grep -i "Windows Boot Manager" | head -n1 | sed 's/^Boot\([0-9A-Fa-f]\{4\}\).*/\1/' || true)
       if [ -z "$entry" ]; then
         echo "No 'Windows Boot Manager' entry found in efibootmgr output" >&2
         exit 1
