@@ -43,7 +43,7 @@ let
     [Desktop Entry]
     Version=0.1
     Name=Mep (Mise En Place)
-    Exec=kitty -e nix run --refresh "github:jordanschupbach/mep" --extra-experimental-features flakes --extra-experimental-features nix-command %U
+    Exec=kitty -e bash -ic 'mep "$@"' mep %U
     Type=Application
     Terminal=false
     Categories=Development;TextEditor;

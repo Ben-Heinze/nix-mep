@@ -1,6 +1,19 @@
 # neovim
 alias neo="nix run --refresh github:Ben-Heinze/nvmep2 --extra-experimental-features flakes --extra-experimental-features nix-command"
-alias mep="nix run --refresh github:jordanschupbach/mep --extra-experimental-features flakes --extra-experimental-features nix-command"
+
+# mep: launches the locally pinned build (no update check, starts instantly).
+# mep-update: fetches the latest mep from GitHub and rebuilds; run it when you want new features.
+# The build is kept at $MEP_LINK, which also protects it from nix garbage collection.
+MEP_LINK="$HOME/.local/state/mep/current"
+mep-update() {
+  mkdir -p "$(dirname "$MEP_LINK")"
+  nix build --refresh github:jordanschupbach/mep --out-link "$MEP_LINK" \
+    --extra-experimental-features flakes --extra-experimental-features nix-command
+}
+mep() {
+  [ -x "$MEP_LINK/bin/mep" ] || mep-update || return 1
+  "$MEP_LINK/bin/mep" "$@"
+}
 # emacs
 alias emc="nix run --refresh github:jordanschupbach/emc --extra-experimental-features flakes --extra-experimental-features nix-command -- -nw"
 

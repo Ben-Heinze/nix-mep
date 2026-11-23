@@ -98,6 +98,14 @@
 
   # }}} Thermal + power management
 
+  # {{{ Screen locker
+
+  # slock: adds the package *and* the setuid-root wrapper it needs to read
+  # /etc/shadow for password verification (plain systemPackages isn't enough).
+  programs.slock.enable = true;
+
+  # }}} Screen locker
+
   # xps15-specific packages
   environment.systemPackages = with pkgs; [
     brave
