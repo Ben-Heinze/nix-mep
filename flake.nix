@@ -51,6 +51,20 @@
       };
     };
 
+    nixosConfigurations.miniPC = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        ./common/configuration.nix
+        ./hosts/miniPC/configuration.nix
+        home-manager-stable.nixosModules.home-manager
+        homeManagerModule
+      ];
+      specialArgs = {
+        inherit inputs;
+        inherit unstablePkgs;
+      };
+    };
+
     nixosConfigurations.surfacepro = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       modules = [
